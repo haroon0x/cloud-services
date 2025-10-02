@@ -5,6 +5,7 @@ from typing import Optional, Dict
 from werkzeug.utils import secure_filename
 from storage.base import StorageInterface
 from schema import DatasetUploadResponse, PreprocessingConfig
+from synthetic_data_kit.core.ingest import process_file
 from datasets import DatasetDict
 import pandas as pd
 import io
@@ -27,6 +28,10 @@ class DatasetHandler:
     - JSONL files (.jsonl)
     - Excel files (.xlsx, .xls)
     - Parquet files (.parquet)
+    - PDF files (.pdf)
+    - Word documents (.docx)
+    - PowerPoint presentations (.pptx)
+    - HTML files (.html)
 
     Attributes:
         storage (StorageInterface): An interface for storage operations
@@ -55,7 +60,12 @@ class DatasetHandler:
             "xlsx",
             "xls",
             "parquet",
+            "pdf",
+            "docx",
+            "pptx",
+            "html",
         }
+        self.unstructured_formats = {"html", "pdf", "docx", "pptx"}
 
     def _is_allowed_file(self, filename: str) -> bool:
         """
@@ -137,6 +147,7 @@ class DatasetHandler:
 
             file_id = str(uuid.uuid4())
             secure_name = secure_filename(filename)
+            file_type = filename.rsplit(".", 1)[1].lower()
             blob_name = f"raw_datasets/{file_id}_{secure_name}"
 
             upload_metadata = {
@@ -150,14 +161,15 @@ class DatasetHandler:
                 file_data, blob_name, upload_metadata
             )
 
-            sample = (
-                pd.read_csv(io.BytesIO(file_data)).head(5).to_dict(orient="records")
-            )
-
-            num_examples = len(pd.read_csv(io.BytesIO(file_data)))
-
+            if file_type in self.supported_formats:
+                sample = ( pd.read_csv(io.BytesIO(file_data)).head(5).to_dict(orient="records") ) 
+                num_examples = len(pd.read_csv(io.BytesIO(file_data)))
+            elif file_type in self.unstructured_formats:
+                process_file()
+            else:
+                raise NotImplementedError( f"file type '{file_type}' is not supported.")
+            
             print(sample)
-
             return DatasetUploadResponse(
                 dataset_id=file_id,
                 filename=secure_name,
