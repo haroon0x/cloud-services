@@ -11,7 +11,7 @@ import requests
 from pathlib import Path
 from typing import Optional, Dict, Any
 import importlib
-
+import io
 from synthetic_data_kit.utils.config import get_path_config
 
 
@@ -33,37 +33,15 @@ def _check_pdf_url(url: str) -> bool:
         return False
 
 
-def determine_parser(file_path: str, config: Dict[str, Any], multimodal: bool = False):
+def determine_parser(file_path: str) -> Any:
     """Determine the appropriate parser for a file or URL"""
     from synthetic_data_kit.parsers.pdf_parser import PDFParser
     from synthetic_data_kit.parsers.html_parser import HTMLParser
-    from synthetic_data_kit.parsers.youtube_parser import YouTubeParser
     from synthetic_data_kit.parsers.docx_parser import DOCXParser
     from synthetic_data_kit.parsers.ppt_parser import PPTParser
-    from synthetic_data_kit.parsers.txt_parser import TXTParser
-    from synthetic_data_kit.parsers.multimodal_parser import MultimodalParser
 
     ext = os.path.splitext(file_path)[1].lower()
-    if multimodal:
-        if ext in [".pdf", ".docx", ".pptx"]:
-            return MultimodalParser()
-        else:
-            raise ValueError(f"Unsupported file extension for multimodal parsing: {ext}")
-
-    if ext == ".pdf":
-        return PDFParser()
-
-    # Check if it's a URL
-    if file_path.startswith(("http://", "https://")):
-        # YouTube URL
-        if "youtube.com" in file_path or "youtu.be" in file_path:
-            return YouTubeParser()
-        # PDF URL
-        elif _check_pdf_url(file_path):
-            return MultimodalParser() if multimodal else PDFParser()
-        # HTML URL
-        else:
-            return HTMLParser()
+   
 
     # File path - determine by extension
     if os.path.exists(file_path):
@@ -72,7 +50,7 @@ def determine_parser(file_path: str, config: Dict[str, Any], multimodal: bool = 
             ".htm": HTMLParser(),
             ".docx": DOCXParser(),
             ".pptx": PPTParser(),
-            ".txt": TXTParser(),
+            ".pdf": PDFParser(),
         }
 
         if ext in parsers:
@@ -85,6 +63,7 @@ def determine_parser(file_path: str, config: Dict[str, Any], multimodal: bool = 
 
 def process_file(
     file_path: str,
+    file_data: bytes,
     output_dir: Optional[str] = None,
     output_name: Optional[str] = None,
     config: Optional[Dict[str, Any]] = None,
@@ -112,7 +91,7 @@ def process_file(
     parser = determine_parser(file_path, config, multimodal)
 
     # Parse the file
-    content = parser.parse(file_path)
+    content = parser.parse(file_data)
 
     # Generate output filename if not provided
     if not output_name:
@@ -148,4 +127,4 @@ def process_file(
     create_lance_dataset(content, output_path, schema=schema)
 
 
-    return output_path
+    return content

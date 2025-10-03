@@ -13,11 +13,11 @@ from urllib.parse import urlparse
 class HTMLParser:
     """Parser for HTML files and web pages"""
     
-    def parse(self, file_path: str) -> str:
+    def parse(self, file_stream) -> str:
         """Parse an HTML file or URL into plain text
         
         Args:
-            file_path: Path to the HTML file or URL
+            file_stream: A file-like object (stream) of the HTML content
             
         Returns:
             Extracted text from the HTML
@@ -27,16 +27,7 @@ class HTMLParser:
         except ImportError:
             raise ImportError("beautifulsoup4 is required for HTML parsing. Install it with: pip install beautifulsoup4")
         
-        # Determine if file_path is a URL or a local file
-        if file_path.startswith(('http://', 'https://')):
-            # It's a URL, fetch content
-            response = requests.get(file_path)
-            response.raise_for_status()
-            html_content = response.text
-        else:
-            # It's a local file, read it
-            with open(file_path, 'r', encoding='utf-8') as f:
-                html_content = f.read()
+        html_content = file_stream.read()
         
         # Parse HTML and extract text
         soup = BeautifulSoup(html_content, 'html.parser')

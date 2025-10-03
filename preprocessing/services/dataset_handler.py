@@ -160,12 +160,14 @@ class DatasetHandler:
             storage_path = self.storage.upload_data(
                 file_data, blob_name, upload_metadata
             )
-
+ 
             if file_type in self.supported_formats:
                 sample = ( pd.read_csv(io.BytesIO(file_data)).head(5).to_dict(orient="records") ) 
                 num_examples = len(pd.read_csv(io.BytesIO(file_data)))
             elif file_type in self.unstructured_formats:
-                process_file()
+                content = process_file(file_path=filename , file_data=file_data)
+                sample = content[:5]
+                num_examples = len(content)
             else:
                 raise NotImplementedError( f"file type '{file_type}' is not supported.")
             

@@ -11,11 +11,11 @@ from typing import Dict, Any
 class PPTParser:
     """Parser for PowerPoint presentations"""
     
-    def parse(self, file_path: str) -> str:
+    def parse(self, file_stream) -> str:
         """Parse a PPTX file into plain text
         
         Args:
-            file_path: Path to the PPTX file
+            file_stream: A file-like object (stream) of the PPTX file
             
         Returns:
             Extracted text from the presentation
@@ -25,7 +25,7 @@ class PPTParser:
         except ImportError:
             raise ImportError("python-pptx is required for PPTX parsing. Install it with: pip install python-pptx")
         
-        prs = Presentation(file_path)
+        prs = Presentation(file_stream)
         
         # Extract text from slides
         all_text = []

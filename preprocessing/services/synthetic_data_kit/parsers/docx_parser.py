@@ -10,11 +10,11 @@ from typing import Dict, Any
 class DOCXParser:
     """Parser for Microsoft Word documents"""
     
-    def parse(self, file_path: str) -> str:
+    def parse(self, file_stream) -> str:
         """Parse a DOCX file into plain text
         
         Args:
-            file_path: Path to the DOCX file
+            file_stream: A file-like object (stream) of the DOCX file
             
         Returns:
             Extracted text from the document
@@ -24,7 +24,7 @@ class DOCXParser:
         except ImportError:
             raise ImportError("python-docx is required for DOCX parsing. Install it with: pip install python-docx")
         
-        doc = docx.Document(file_path)
+        doc = docx.Document(file_stream)
         
         # Extract text from paragraphs
         paragraphs = [p.text for p in doc.paragraphs]
