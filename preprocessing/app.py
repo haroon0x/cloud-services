@@ -1,10 +1,18 @@
 import os
+import sys
+from pathlib import Path
+
+# Add project root to the Python path
+project_root = Path(__file__).resolve().parents[2]
+sys.path.append(str(project_root))
+
 import logging
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from storage import GCSStorageManager, LocalStorageManager
 from services.dataset_service import DatasetService
 from dataset_tracker import DatasetTracker
+from local_dataset_tracker import LocalDatasetTracker
 import base64
 import json
 from schema import (
@@ -18,8 +26,6 @@ from schema import (
 )
 
 project_id = os.getenv("PROJECT_ID")
-dataset_tracker = DatasetTracker(project_id)
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,15 +44,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-storage_type = os.getenv("STORAGE_TYPE", "gcs")  # "gcs" or "local" | defualts to "gcs"
+storage_type = os.getenv("STORAGE_TYPE", "local")  # "gcs" or "local"
 
 if storage_type == "gcs":
     bucket_name = os.getenv("GCS_DATA_BUCKET_NAME", "gemma-dataset-bucket")
     storage_manager = GCSStorageManager(bucket_name)
+    dataset_tracker = DatasetTracker(project_id)
     logger.info(f"Using GCS storage with bucket: {bucket_name}")
 else:
     data_path = os.getenv("LOCAL_DATA_PATH", "./data")
     storage_manager = LocalStorageManager(data_path)
+    dataset_tracker = LocalDatasetTracker(data_path)
     logger.info(f"Using local storage at: {data_path}")
 
 dataset_service = DatasetService(storage_manager)
@@ -114,6 +122,7 @@ async def upload_dataset(
         file_content = await file.read()
         filetype = file.filename.rsplit(".", 1)[1].lower()
         content_type = MIME_TYPES[filetype]
+
         result = dataset_service.upload_dataset(
             file_data=file_content,
             filename=file.filename or "unknown",
@@ -128,7 +137,6 @@ async def upload_dataset(
             "content_type": content_type or "unknown",
             "size_bytes": result.size_bytes,
         }
-
         dataset_tracker.track_raw_dataset(raw_metadata)
 
         return result
